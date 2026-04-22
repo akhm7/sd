@@ -154,3 +154,4 @@ vegetation_area_ha = (ndvi_mask > 0.3).sum() * pixel_area_m2 / 10_000
 - He et al. (2010) — BUI
 - Osgouei et al. (2019) — Istanbul, *MDPI Remote Sensing 11(3):345*
 - Teshome et al. (2022) — Addis Ababa, *ScienceDirect Environmental Challenges*
+- Bhatt et al. (2021) — обзор индексов застройки, *Arabian Journal of Geosciences*
