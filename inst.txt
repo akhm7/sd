@@ -1,0 +1,14 @@
+https://clearsky.vision/knowledge/sentinel2-indices-cheatsheet
+
+https://custom-scripts.sentinel-hub.com/custom-scripts/landsat-8/built_up_index/
+
+
+https://docs.geopera.com/spectral-indices/ui
+https://abinprajapati.com.np/geospatialblogdetail/14/
+
+
+https://support.climateengine.org/article/179-bare-soil-index
+
+https://innoter.com/articles/vidy-vodnykh-indeksov-i-ikh-primenenie/
+
+https://www.mdpi.com/2072-4292/11/3/345
