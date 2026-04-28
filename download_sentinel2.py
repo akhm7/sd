@@ -2,7 +2,7 @@
 Скачиваем снимки Sentinel-2 для задачи NDBI/NDVI по Ташкенту.
 
 Используем COG (Cloud Optimized GeoTIFF) — rasterio читает только нужный
-кусок прямо с S3 по HTTP, без скачивания всего файла (~150 МБ → ~50 КБ).
+кусок прямо с S3 по HTTP, без скачивания всего файла.
 
 Что качаем:
   B02 blue, B03 green, B04 red          — RGB (True Color)
@@ -19,12 +19,7 @@
   NDTI  = (B11 - B12) / (B11 + B12)
   NDVIre= (B8A - B05) / (B8A + B05)
 
-Запуск:
-  1. setup.bat  (один раз)
-  2. .venv/Scripts/activate
-  3. python download_sentinel2.py
-
-STAC: Element84 Earth Search v1 (бесплатно, без токенов)
+STAC: Element84 Earth Search v1
 """
 
 import time

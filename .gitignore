@@ -1,1 +1,30 @@
 /.claude
+
+# venv
+.venv/
+venv/
+
+# данные (качаются скриптом, ~3800 файлов)
+data/sentinel2/*.tif
+
+# заметки личные
+notes/
+
+# jupyter
+.ipynb_checkpoints/
+
+# python
+__pycache__/
+*.pyc
+
+# картинки-результаты (генерируются ноутбуком)
+output/
+
+# системные
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ide
+.vscode/
+.idea/
