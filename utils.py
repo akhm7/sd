@@ -4,6 +4,7 @@ import rasterio
 from rasterio.enums import Resampling
 from pathlib import Path
 from collections import defaultdict
+from skimage.exposure import match_histograms
 
 
 DATA_DIR = Path("data/sentinel2")
@@ -14,6 +15,12 @@ BANDS = {"blue":"B02", "green":"B03", "red":"B04",
 ndbi_t = 0.0
 ndvi_t = 0.2
 mndwi_t = 0.0
+
+# эталонная сцена для нормализации - лето 2021, чистое небо
+# препод на консультации сказал применять histogram matching
+# чтоб убрать разницу в освещенности между датами
+REF_DATE = "2021-07-13"
+_ref_cache = {}
 
 
 def get_dates():
@@ -48,14 +55,37 @@ def norm_idx(a, b):
     return r
 
 
-def calc_area(date, thresh=0.0):
+def _get_ref(band, shape):
+    # кешируем чтоб не загружать референс каждый раз
+    key = (band, shape)
+    if key not in _ref_cache:
+        _ref_cache[key] = load_band(REF_DATE, band, shape)
+    return _ref_cache[key]
+
+
+def load_band_norm(date, band, shape=None):
+    # подгоняем гистограмму к эталонной сцене (skimage histogram matching)
+    raw = load_band(date, band, shape)
+    if date == REF_DATE:
+        return raw
+    ref = _get_ref(band, raw.shape)
+    # NaN сначала заполняем медианой - match_histograms не любит nan
+    raw_f = np.where(np.isnan(raw), np.nanmedian(raw), raw)
+    ref_f = np.where(np.isnan(ref), np.nanmedian(ref), ref)
+    out = match_histograms(raw_f, ref_f).astype(np.float32)
+    out[np.isnan(raw)] = np.nan
+    return out
+
+
+def calc_area(date, thresh=0.0, normalize=False):
+    loader = load_band_norm if normalize else load_band
     with rasterio.open(DATA_DIR / f"s2_B11_{date}.tif") as src:
         ref = src.shape
 
-    b11 = load_band(date, BANDS["swir1"], ref)
-    b08 = load_band(date, BANDS["nir"],  ref)
-    b04 = load_band(date, BANDS["red"],  ref)
-    b03 = load_band(date, BANDS["green"],ref)
+    b11 = loader(date, BANDS["swir1"], ref)
+    b08 = loader(date, BANDS["nir"],  ref)
+    b04 = loader(date, BANDS["red"],  ref)
+    b03 = loader(date, BANDS["green"],ref)
 
     ndbi = norm_idx(b11, b08)
     ndvi = norm_idx(b08, b04)

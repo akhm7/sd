@@ -44,7 +44,17 @@ thresh = st.sidebar.radio(
     ["NDBI > 0 (стандарт)", "NDBI > 0.05"],
     index=0
 )
-col_area = "area_t0" if "0 " in thresh else "area_t005"
+
+normalize = st.sidebar.checkbox(
+    "Нормализация гистограммы",
+    value=False,
+    help="по совету препода - подгонка снимков под эталон 2021-07-13 чтоб убрать атмосферный шум"
+)
+
+if normalize:
+    col_area = "area_t0_norm"
+else:
+    col_area = "area_t0" if "0 " in thresh else "area_t005"
 
 season = st.sidebar.selectbox(
     "Сезон",
@@ -88,7 +98,15 @@ with tab1:
     st.header("Динамика застройки")
 
     # годовая сводка
-    col_med = "median" if "0 " in thresh else "median_t005"
+    if normalize:
+        col_med = "median_norm"
+        col_lo, col_hi = "min_norm", "max_norm"
+    elif "0 " in thresh:
+        col_med = "median"
+        col_lo, col_hi = "min", "max"
+    else:
+        col_med = "median_t005"
+        col_lo, col_hi = None, None
 
     if "Лето" in season:
         # используем предрассчитанную сводку
@@ -102,19 +120,15 @@ with tab1:
             c2.metric("Финиш", f"{last:.0f} га", delta=f"{last-first:+.0f} га")
             c3.metric("Рост", f"{(last-first)/first*100:+.1f}%")
 
-            # столбчатая диаграмма с error bars
             fig, ax = plt.subplots(figsize=(10, 5))
             x = np.arange(len(sm))
             meds = sm[col_med].values
-            if col_med == "median":
-                yerr_low = meds - sm["min"].values
-                yerr_high = sm["max"].values - meds
-            else:
-                yerr_low = np.zeros(len(sm))
-                yerr_high = np.zeros(len(sm))
+            color = "#3498db" if normalize else "#e74c3c"
+            ax.bar(x, meds, color=color, alpha=0.8)
 
-            ax.bar(x, meds, color="#e74c3c", alpha=0.8)
-            if col_med == "median":
+            if col_lo is not None:
+                yerr_low = meds - sm[col_lo].values
+                yerr_high = sm[col_hi].values - meds
                 ax.errorbar(x, meds, yerr=[yerr_low, yerr_high],
                            fmt="none", color="black", capsize=4, lw=1.5)
             for i, m in enumerate(meds):

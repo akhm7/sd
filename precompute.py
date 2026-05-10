@@ -24,6 +24,8 @@ def main():
         try:
             a0, _, idx = calc_area(d, thresh=0.0)
             a5, _, _ = calc_area(d, thresh=0.05)
+            # с нормализацией - после консультации с преподом
+            a0n, _, _ = calc_area(d, thresh=0.0, normalize=True)
             ndbi = idx["ndbi"]
             rows.append({
                 "date": d,
@@ -31,6 +33,7 @@ def main():
                 "month": int(d[5:7]),
                 "area_t0": round(a0, 1),
                 "area_t005": round(a5, 1),
+                "area_t0_norm": round(a0n, 1),
                 "ndbi_mean": round(float(np.nanmean(ndbi)), 4),
                 "ndbi_std": round(float(np.nanstd(ndbi)), 4),
             })
@@ -47,14 +50,17 @@ def main():
     summer = [r for r in rows if r["month"] in (6,7,8) and r["area_t0"] > 50]
     by_year = defaultdict(list)
     by_year5 = defaultdict(list)
+    by_year_n = defaultdict(list)
     for r in summer:
         by_year[r["year"]].append(r["area_t0"])
         by_year5[r["year"]].append(r["area_t005"])
+        by_year_n[r["year"]].append(r["area_t0_norm"])
 
     summary = []
     for y in sorted(by_year.keys()):
         vals = by_year[y]
         vals5 = by_year5[y]
+        valsn = by_year_n[y]
         summary.append({
             "year": y,
             "median": round(np.median(vals), 1),
@@ -64,8 +70,11 @@ def main():
             "q75": round(np.percentile(vals, 75), 1),
             "n_scenes": len(vals),
             "median_t005": round(np.median(vals5), 1),
+            "median_norm": round(np.median(valsn), 1),
+            "min_norm": round(np.min(valsn), 1),
+            "max_norm": round(np.max(valsn), 1),
         })
-        print(f"  {y}: {summary[-1]['median']:.0f} га ({len(vals)} сцен)")
+        print(f"  {y}: {summary[-1]['median']:.0f} га / норм {summary[-1]['median_norm']:.0f} ({len(vals)} сцен)")
 
     with open(OUT / "yearly_summary.csv", "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=summary[0].keys())
