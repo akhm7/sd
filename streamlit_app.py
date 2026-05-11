@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+import plotly.graph_objects as go
+import plotly.express as px
 from pathlib import Path
 from datetime import datetime
 
@@ -108,8 +108,9 @@ with tab1:
         col_med = "median_t005"
         col_lo, col_hi = None, None
 
+    color = "#3498db" if normalize else "#e74c3c"
+
     if "Лето" in season:
-        # используем предрассчитанную сводку
         sm = summary[(summary["year"] >= yr_range[0]) & (summary["year"] <= yr_range[1])]
 
         if len(sm) >= 2:
@@ -120,88 +121,102 @@ with tab1:
             c2.metric("Финиш", f"{last:.0f} га", delta=f"{last-first:+.0f} га")
             c3.metric("Рост", f"{(last-first)/first*100:+.1f}%")
 
-            fig, ax = plt.subplots(figsize=(10, 5))
-            x = np.arange(len(sm))
-            meds = sm[col_med].values
-            color = "#3498db" if normalize else "#e74c3c"
-            ax.bar(x, meds, color=color, alpha=0.8)
-
+            # бар чарт через plotly
+            fig = go.Figure()
+            err_args = {}
             if col_lo is not None:
-                yerr_low = meds - sm[col_lo].values
-                yerr_high = sm[col_hi].values - meds
-                ax.errorbar(x, meds, yerr=[yerr_low, yerr_high],
-                           fmt="none", color="black", capsize=4, lw=1.5)
-            for i, m in enumerate(meds):
-                ax.text(i, m+3, f"{m:.0f}", ha="center", fontsize=9)
-            ax.set_xticks(x)
-            ax.set_xticklabels(sm["year"].values)
-            ax.set_xlabel("год")
-            ax.set_ylabel("площадь, га")
-            ax.set_title(f"застройка по годам ({thresh}, лето)")
-            ax.grid(True, alpha=0.3, axis="y")
-            plt.tight_layout()
-            st.pyplot(fig)
-            plt.close(fig)
+                err_args = {"error_y": dict(
+                    type="data", symmetric=False,
+                    array=sm[col_hi]-sm[col_med],
+                    arrayminus=sm[col_med]-sm[col_lo],
+                    color="black", thickness=1.5, width=6,
+                )}
+            fig.add_trace(go.Bar(
+                x=sm["year"], y=sm[col_med],
+                marker_color=color, opacity=0.85,
+                text=[f"{m:.0f}" for m in sm[col_med]],
+                textposition="outside",
+                hovertemplate="год %{x}<br>%{y:.0f} га<extra></extra>",
+                **err_args
+            ))
+            fig.update_layout(
+                title=f"застройка по годам ({thresh}, лето)",
+                xaxis_title="год", yaxis_title="площадь, га",
+                showlegend=False, height=400,
+            )
+            st.plotly_chart(fig, use_container_width=True)
     else:
-        # для не-лета считаем сводку из данных
-        by_yr = df_f.groupby("year")[col_area].agg(["median","min","max","count"])
+        by_yr = df_f.groupby("year")[col_area].agg(["median","min","max","count"]).reset_index()
 
         if len(by_yr) >= 2:
-            fig, ax = plt.subplots(figsize=(10, 5))
-            x = np.arange(len(by_yr))
-            meds = by_yr["median"].values
-            ax.bar(x, meds, color="#e74c3c", alpha=0.8)
-            yerr_low = meds - by_yr["min"].values
-            yerr_high = by_yr["max"].values - meds
-            ax.errorbar(x, meds, yerr=[yerr_low, yerr_high],
-                       fmt="none", color="black", capsize=4, lw=1.5)
-            for i, m in enumerate(meds):
-                ax.text(i, m+3, f"{m:.0f}", ha="center", fontsize=9)
-            ax.set_xticks(x)
-            ax.set_xticklabels(by_yr.index)
-            ax.set_xlabel("год")
-            ax.set_ylabel("площадь, га")
-            ax.set_title(f"застройка по годам ({thresh})")
-            ax.grid(True, alpha=0.3, axis="y")
-            plt.tight_layout()
-            st.pyplot(fig)
-            plt.close(fig)
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=by_yr["year"], y=by_yr["median"],
+                marker_color=color, opacity=0.85,
+                error_y=dict(
+                    type="data", symmetric=False,
+                    array=by_yr["max"]-by_yr["median"],
+                    arrayminus=by_yr["median"]-by_yr["min"],
+                    color="black", thickness=1.5, width=6,
+                ),
+                text=[f"{m:.0f}" for m in by_yr["median"]],
+                textposition="outside",
+                hovertemplate="год %{x}<br>%{y:.0f} га<extra></extra>",
+            ))
+            fig.update_layout(
+                title=f"застройка по годам ({thresh})",
+                xaxis_title="год", yaxis_title="площадь, га",
+                showlegend=False, height=400,
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
 
-    # временной ряд
     if len(df_f) > 5:
         st.subheader("Временной ряд")
-        fig, ax = plt.subplots(figsize=(14, 5))
-        ax.plot(df_f["date"], df_f[col_area],
-                "o-", color="#e74c3c", lw=1, ms=4, alpha=0.7, label="площадь")
+        df_s = df_f.sort_values("date").reset_index(drop=True)
+
+        fig = go.Figure()
+        # точки
+        fig.add_trace(go.Scatter(
+            x=df_s["date"], y=df_s[col_area],
+            mode="markers+lines",
+            name="площадь",
+            marker=dict(size=5, color=color),
+            line=dict(width=1, color=color),
+            opacity=0.7,
+            hovertemplate="%{x|%Y-%m-%d}<br>%{y:.0f} га<extra></extra>",
+        ))
 
         # тренд
-        xn = mdates.date2num(df_f["date"])
-        z = np.polyfit(xn, df_f[col_area].values, 1)
-        ax.plot(df_f["date"], np.poly1d(z)(xn),
-                "--", color="#c0392b", lw=2, label="тренд")
+        xn = (df_s["date"].astype(np.int64) // 10**9).astype(float).values
+        z = np.polyfit(xn, df_s[col_area].values, 1)
+        fig.add_trace(go.Scatter(
+            x=df_s["date"], y=np.poly1d(z)(xn),
+            mode="lines", name="тренд",
+            line=dict(dash="dash", width=2, color="#c0392b"),
+        ))
 
         # скользящее среднее
-        w = min(10, len(df_f)//3)
+        w = min(10, len(df_s)//3)
         if w >= 3:
-            sm_vals = np.convolve(df_f[col_area].values,
-                                  np.ones(w)/w, mode="valid")
+            sm_vals = np.convolve(df_s[col_area].values, np.ones(w)/w, mode="valid")
             off = w//2
-            dates_sm = df_f["date"].values[off:off+len(sm_vals)]
-            ax.plot(dates_sm, sm_vals, "-", color="#2ecc71",
-                    lw=2, alpha=0.8, label=f"скольз.среднее ({w})")
+            dates_sm = df_s["date"].values[off:off+len(sm_vals)]
+            fig.add_trace(go.Scatter(
+                x=dates_sm, y=sm_vals,
+                mode="lines",
+                name=f"скольз.среднее ({w})",
+                line=dict(width=2.5, color="#2ecc71"),
+                opacity=0.85,
+            ))
 
-        ax.xaxis.set_major_locator(mdates.YearLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
-        ax.set_xlabel("год")
-        ax.set_ylabel("площадь, га")
-        ax.set_title(f"динамика застройки ({thresh})")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close(fig)
+        fig.update_layout(
+            title=f"динамика застройки ({thresh})",
+            xaxis_title="год", yaxis_title="площадь, га",
+            hovermode="x unified", height=450,
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
 
 with tab2:
