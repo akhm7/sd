@@ -16,13 +16,13 @@ def load_results():
     return df
 
 
-def get_map_files(season_key):
-    # season_key: "summer" / "winter"
-    maps = sorted(MAPS_DIR.glob(f"map_{season_key}_*.png"))
+def get_map_files(season_key, combo_key):
+    # season_key: summer/winter, combo_key: t0/t005/t0_norm/t005_norm
+    maps = sorted(MAPS_DIR.glob(f"map_{season_key}_{combo_key}_*.png"))
     out = {}
     for p in maps:
-        # имя: map_summer_2025-07-17.png -> ключ "2025" -> дата "2025-07-17"
-        date = p.stem.replace(f"map_{season_key}_", "")
+        # имя: map_summer_t0_2025-07-17.png -> ключ "2025" -> дата "2025-07-17"
+        date = p.stem.replace(f"map_{season_key}_{combo_key}_", "")
         out[date[:4]] = (date, p)
     return out
 
@@ -303,13 +303,11 @@ with tab1:
 
 
 with tab2:
-    # карты зависят от сезона в sidebar
-    if "зима" in season:
-        season_key = "winter"
-    else:
-        season_key = "summer"  # лето или все - показываем летние
+    # карты зависят от sidebar (сезон, порог, нормализация)
+    season_key = "winter" if "зима" in season else "summer"
+    combo_key = ("t0" if is_t0 else "t005") + ("_norm" if normalize else "")
 
-    map_files = get_map_files(season_key)
+    map_files = get_map_files(season_key, combo_key)
     if not map_files:
         st.warning("карт нет, надо запустить precompute.py")
     else:
@@ -317,7 +315,7 @@ with tab2:
 
         left, right = st.columns([5, 1])
         with right:
-            st.caption(f"сезон: {season_key}")
+            st.caption(f"{season_key} | {thresh}{' + норм' if normalize else ''}")
             sel_year = st.radio("год", years_av,
                                 index=len(years_av)-1,
                                 label_visibility="collapsed")
@@ -325,10 +323,8 @@ with tab2:
             row = df[df["date"] == pd.Timestamp(sel_date)]
             if len(row) > 0:
                 r = row.iloc[0]
-                st.write(f"**{r['area_t0']:.0f} га**")
-                st.caption("NDBI > 0")
-                st.write(f"{r['area_t005']:.0f} га")
-                st.caption("NDBI > 0.05")
+                st.write(f"**{r[col_area]:.0f} га**")
+                st.caption(thresh + (" + норм" if normalize else ""))
 
         with left:
             st.image(str(sel_path), use_container_width=True)

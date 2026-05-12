@@ -116,8 +116,17 @@ def main():
                 return c[len(c)//2]
         return None
 
-    def render(d, label):
-        area, mask, idx = calc_area(d, thresh=0.0)
+    # генерим 4 версии карт для каждой даты:
+    # порог 0 / 0.05  x  норм да/нет
+    combos = [
+        ("t0",        0.0,  False),
+        ("t005",      0.05, False),
+        ("t0_norm",   0.0,  True),
+        ("t005_norm", 0.05, True),
+    ]
+
+    def render(d, season_lbl, key, thresh, norm):
+        area, mask, idx = calc_area(d, thresh=thresh, normalize=norm)
         rgb = load_rgb(d, idx["shape"])
         fig, ax = plt.subplots(1, 3, figsize=(16, 5))
         ax[0].imshow(rgb); ax[0].set_title(f"True Color\n{d}"); ax[0].axis("off")
@@ -127,9 +136,11 @@ def main():
         ov = rgb.copy()
         ov[mask,0]=1.0; ov[mask,1]=0.2; ov[mask,2]=0.2
         ax[2].imshow(ov); ax[2].set_title(f"маска\n{area:.1f} га"); ax[2].axis("off")
-        plt.suptitle(f"Ташкент {d} ({label})", fontsize=13, fontweight="bold")
+        suffix = "норм." if norm else ""
+        plt.suptitle(f"Ташкент {d} | порог {thresh} {suffix}",
+                     fontsize=13, fontweight="bold")
         plt.tight_layout()
-        fig.savefig(OUT / f"maps/map_{label}_{d}.png", dpi=150)
+        fig.savefig(OUT / f"maps/map_{season_lbl}_{key}_{d}.png", dpi=120)
         plt.close(fig)
 
     for year, yd in sorted(by_year.items()):
@@ -137,11 +148,12 @@ def main():
         w = pick(yd, winter_months)
         for d, lbl in [(s, "summer"), (w, "winter")]:
             if not d: continue
-            try:
-                print(f"карта {year} {lbl}: {d}")
-                render(d, lbl)
-            except Exception as e:
-                print(f"ошибка {d}: {e}")
+            for key, th, norm in combos:
+                try:
+                    print(f"карта {year} {lbl} {key}: {d}")
+                    render(d, lbl, key, th, norm)
+                except Exception as e:
+                    print(f"ошибка {d} {key}: {e}")
 
     print("готово")
 
