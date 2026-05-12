@@ -18,10 +18,10 @@ def load_results():
 
 def get_map_files(season_key, combo_key):
     # season_key: summer/winter, combo_key: t0/t005/t0_norm/t005_norm
-    maps = sorted(MAPS_DIR.glob(f"map_{season_key}_{combo_key}_*.png"))
+    # glob с [0-9] чтоб t0 не ловил t0_norm и tt005 не ловил t005_norm
+    maps = sorted(MAPS_DIR.glob(f"map_{season_key}_{combo_key}_[0-9]*.png"))
     out = {}
     for p in maps:
-        # имя: map_summer_t0_2025-07-17.png -> ключ "2025" -> дата "2025-07-17"
         date = p.stem.replace(f"map_{season_key}_{combo_key}_", "")
         out[date[:4]] = (date, p)
     return out
