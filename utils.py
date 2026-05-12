@@ -16,10 +16,7 @@ ndbi_t = 0.0
 ndvi_t = 0.2
 mndwi_t = 0.0
 
-# эталонная сцена для нормализации - лето 2021, чистое небо
-# препод на консультации сказал применять histogram matching
-# чтоб убрать разницу в освещенности между датами
-REF_DATE = "2021-07-13"
+REF_DATE = "2021-07-13"  # эталон для нормализации
 _ref_cache = {}
 
 
@@ -29,7 +26,6 @@ def get_dates():
         p = f.stem.split("_")
         if len(p)==3:
             db[p[2]].add(p[1])
-    # оставляем только даты где есть все нужные каналы
     return sorted([d for d,b in db.items()
                    if all(x in b for x in ("B11","B08","B04","B03"))])
 
@@ -56,7 +52,6 @@ def norm_idx(a, b):
 
 
 def _get_ref(band, shape):
-    # кешируем чтоб не загружать референс каждый раз
     key = (band, shape)
     if key not in _ref_cache:
         _ref_cache[key] = load_band(REF_DATE, band, shape)
@@ -64,12 +59,10 @@ def _get_ref(band, shape):
 
 
 def load_band_norm(date, band, shape=None):
-    # подгоняем гистограмму к эталонной сцене (skimage histogram matching)
     raw = load_band(date, band, shape)
     if date == REF_DATE:
         return raw
     ref = _get_ref(band, raw.shape)
-    # NaN сначала заполняем медианой - match_histograms не любит nan
     raw_f = np.where(np.isnan(raw), np.nanmedian(raw), raw)
     ref_f = np.where(np.isnan(ref), np.nanmedian(ref), ref)
     out = match_histograms(raw_f, ref_f).astype(np.float32)
@@ -130,7 +123,6 @@ def show_map(date, thresh=0.0):
 
 
 def render_map(date, thresh=0.0):
-    # то же что show_map но без plt.show - чтоб сохранять fig в файл
     try:
         area, mask, idx = calc_area(date, thresh)
     except FileNotFoundError:

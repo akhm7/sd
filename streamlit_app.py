@@ -17,8 +17,6 @@ def load_results():
 
 
 def get_map_files(season_key, combo_key):
-    # season_key: summer/winter, combo_key: t0/t005/t0_norm/t005_norm
-    # glob с [0-9] чтоб t0 не ловил t0_norm и tt005 не ловил t005_norm
     maps = sorted(MAPS_DIR.glob(f"map_{season_key}_{combo_key}_[0-9]*.png"))
     out = {}
     for p in maps:
@@ -80,16 +78,23 @@ tab1, tab2, tab3, tab4 = st.tabs(["динамика", "карты", "данны�
 
 
 with tab1:
-    if normalize and is_t0:
-        col_med, col_lo, col_hi = "median_norm", "min_norm", "max_norm"
-    elif normalize:
-        col_med, col_lo, col_hi = "median_norm_t005", "min_norm_t005", "max_norm_t005"
+    if normalize:
+        col_med = "median_norm" if is_t0 else "median_norm_t005"
+        col_lo = "min_norm" if is_t0 else "min_norm_t005"
+        col_hi = "max_norm" if is_t0 else "max_norm_t005"
     elif is_t0:
-        col_med, col_lo, col_hi = "median", "min", "max"
+        col_med = "median"
+        col_lo = "min"
+        col_hi = "max"
     else:
-        col_med, col_lo, col_hi = "median_t005", "min_t005", "max_t005"
+        col_med = "median_t005"
+        col_lo = "min_t005"
+        col_hi = "max_t005"
 
-    color = "#3498db" if normalize else "#e74c3c"
+    if normalize:
+        color = "#3498db"
+    else:
+        color = "#e74c3c"
 
     if "лето" in season:
         sm = summary[(summary["year"] >= yr_range[0]) & (summary["year"] <= yr_range[1])]
@@ -188,12 +193,10 @@ with tab1:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # ============= прогноз =============
     if "лето" in season:
         sm_all = pd.read_csv(DATA_DIR / "yearly_summary.csv")
         if len(sm_all) >= 4:
-            st.markdown("### прогноз на 2026-2028")
-            st.caption("Holt exponential smoothing на годовых медианах")
+            st.write("прогноз на 2026-2028 (Holt exponential smoothing):")
 
             yrs = sm_all["year"].values
             meds = sm_all[col_med if col_med in sm_all.columns else "median"].values
@@ -210,7 +213,6 @@ with tab1:
                     marker=dict(size=8),
                     hovertemplate="%{x}: %{y:.0f} га<extra></extra>",
                 ))
-                # пунктир от последней точки факта до первой прогноза
                 fig.add_trace(go.Scatter(
                     x=[yrs[-1], future_yrs[0]], y=[meds[-1], pred[0]],
                     mode="lines", line=dict(dash="dash", width=1.5, color="#9b59b6"),
@@ -236,20 +238,16 @@ with tab1:
             except Exception as e:
                 st.warning(f"модель не сошлась: {e}")
 
-    # ============= корреляция застройка vs зелень =============
     if "лето" in season and "median_veg" in summary.columns:
-        st.markdown("### корреляция застройка ↔ зелень")
-        st.caption("растет ли застройка за счет зеленых зон? z-нормализация чтоб масштабы совпали")
+        st.write("корреляция застройка vs зелень (z-нормализация чтоб масштабы совпали):")
 
         sm_corr = summary.copy()
         bld = sm_corr[col_med].values
         veg = sm_corr["median_veg"].values
 
-        # z-norm
         bz = (bld - bld.mean()) / bld.std()
         vz = (veg - veg.mean()) / veg.std()
 
-        # корреляция Пирсона
         r = float(np.corrcoef(bld, veg)[0,1])
 
         c1, c2 = st.columns(2)
@@ -281,7 +279,6 @@ with tab1:
                 showlegend=False,
                 hovertemplate="%{text}<br>застр: %{x:.0f}<br>зел: %{y:.0f}<extra></extra>",
             ))
-            # линия тренда
             z = np.polyfit(bld, veg, 1)
             xs = np.linspace(bld.min(), bld.max(), 50)
             fig.add_trace(go.Scatter(
@@ -296,14 +293,22 @@ with tab1:
             )
             st.plotly_chart(fig, use_container_width=True)
 
-        sign = "отрицательная" if r < 0 else "положительная"
-        strength = "сильная" if abs(r) > 0.7 else "умеренная" if abs(r) > 0.4 else "слабая"
-        st.write(f"**{strength} {sign} связь** (r = {r:.2f}) - "
-                 f"{'застройка растет, зелень падает' if r < -0.4 else 'связь не очень выражена'}")
+        if r < 0:
+            sign = "отрицательная"
+        else:
+            sign = "положительная"
+        if abs(r) > 0.7:
+            strength = "сильная"
+        elif abs(r) > 0.4:
+            strength = "умеренная"
+        else:
+            strength = "слабая"
+        st.write(f"r = {r:.2f}, {strength} {sign} связь")
+        if r < -0.4:
+            st.write("застройка растет, зелень падает")
 
 
 with tab2:
-    # карты зависят от sidebar (сезон, порог, нормализация)
     season_key = "winter" if "зима" in season else "summer"
     combo_key = ("t0" if is_t0 else "t005") + ("_norm" if normalize else "")
 
