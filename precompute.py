@@ -26,6 +26,7 @@ def main():
             a5, _, _ = calc_area(d, thresh=0.05)
             # с нормализацией - после консультации с преподом
             a0n, _, _ = calc_area(d, thresh=0.0, normalize=True)
+            a5n, _, _ = calc_area(d, thresh=0.05, normalize=True)
             ndbi = idx["ndbi"]
             ndvi = idx["ndvi"]
             # площадь растительности - NDVI > 0.3 это активная зелень
@@ -38,6 +39,7 @@ def main():
                 "area_t0": round(a0, 1),
                 "area_t005": round(a5, 1),
                 "area_t0_norm": round(a0n, 1),
+                "area_t005_norm": round(a5n, 1),
                 "area_veg": round(a_veg, 1),
                 "ndbi_mean": round(float(np.nanmean(ndbi)), 4),
                 "ndbi_std": round(float(np.nanstd(ndbi)), 4),
@@ -57,11 +59,13 @@ def main():
     by_year = defaultdict(list)
     by_year5 = defaultdict(list)
     by_year_n = defaultdict(list)
+    by_year_n5 = defaultdict(list)
     by_year_v = defaultdict(list)
     for r in summer:
         by_year[r["year"]].append(r["area_t0"])
         by_year5[r["year"]].append(r["area_t005"])
         by_year_n[r["year"]].append(r["area_t0_norm"])
+        by_year_n5[r["year"]].append(r["area_t005_norm"])
         by_year_v[r["year"]].append(r["area_veg"])
 
     summary = []
@@ -69,6 +73,7 @@ def main():
         vals = by_year[y]
         vals5 = by_year5[y]
         valsn = by_year_n[y]
+        valsn5 = by_year_n5[y]
         valsv = by_year_v[y]
         summary.append({
             "year": y,
@@ -79,9 +84,14 @@ def main():
             "q75": round(np.percentile(vals, 75), 1),
             "n_scenes": len(vals),
             "median_t005": round(np.median(vals5), 1),
+            "min_t005": round(np.min(vals5), 1),
+            "max_t005": round(np.max(vals5), 1),
             "median_norm": round(np.median(valsn), 1),
             "min_norm": round(np.min(valsn), 1),
             "max_norm": round(np.max(valsn), 1),
+            "median_norm_t005": round(np.median(valsn5), 1),
+            "min_norm_t005": round(np.min(valsn5), 1),
+            "max_norm_t005": round(np.max(valsn5), 1),
             "median_veg": round(np.median(valsv), 1),
         })
         print(f"  {y}: {summary[-1]['median']:.0f} га / зел {summary[-1]['median_veg']:.0f} ({len(vals)} сцен)")

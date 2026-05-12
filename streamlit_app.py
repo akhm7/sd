@@ -42,10 +42,11 @@ normalize = st.sidebar.checkbox(
     help="по совету препода - подгонка под эталон 2021-07-13"
 )
 
+is_t0 = "0 " in thresh
 if normalize:
-    col_area = "area_t0_norm"
+    col_area = "area_t0_norm" if is_t0 else "area_t005_norm"
 else:
-    col_area = "area_t0" if "0 " in thresh else "area_t005"
+    col_area = "area_t0" if is_t0 else "area_t005"
 
 season = st.sidebar.selectbox(
     "сезон",
@@ -79,15 +80,14 @@ tab1, tab2, tab3, tab4 = st.tabs(["динамика", "карты", "данны�
 
 
 with tab1:
-    if normalize:
-        col_med = "median_norm"
-        col_lo, col_hi = "min_norm", "max_norm"
-    elif "0 " in thresh:
-        col_med = "median"
-        col_lo, col_hi = "min", "max"
+    if normalize and is_t0:
+        col_med, col_lo, col_hi = "median_norm", "min_norm", "max_norm"
+    elif normalize:
+        col_med, col_lo, col_hi = "median_norm_t005", "min_norm_t005", "max_norm_t005"
+    elif is_t0:
+        col_med, col_lo, col_hi = "median", "min", "max"
     else:
-        col_med = "median_t005"
-        col_lo, col_hi = None, None
+        col_med, col_lo, col_hi = "median_t005", "min_t005", "max_t005"
 
     color = "#3498db" if normalize else "#e74c3c"
 
