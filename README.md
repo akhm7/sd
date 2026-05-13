@@ -62,7 +62,7 @@ COG-режим - скачиваем только нужный кусок пря�
 
 ## деплой
 
-https://tashkent-ndbi.streamlit.app
+https://yashnabad-ndbi.streamlit.app
 
 ## источники
 
