@@ -124,8 +124,8 @@ def main():
         return None
 
     for year, yd in sorted(by_year.items()):
-        s = pick_clean(yd, ("07","06","08","05","04","03"))
-        w = pick_clean(yd, ("01","12","02","11","03"))
+        s = pick_clean(yd, ("07","06","08"))
+        w = pick_clean(yd, ("01","12","02"))
 
         for d, lbl in [(s, "summer"), (w, "winter")]:
             if not d: continue
