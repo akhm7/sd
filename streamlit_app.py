@@ -128,7 +128,7 @@ with tab1:
                 xaxis_title="год", yaxis_title="га",
                 showlegend=False, height=400,
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
     else:
         by_yr = df_f.groupby("year")[col_area].agg(["median","min","max"]).reset_index()
         if len(by_yr) >= 2:
@@ -151,7 +151,7 @@ with tab1:
                 xaxis_title="год", yaxis_title="га",
                 showlegend=False, height=400,
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     if len(df_f) > 5:
         df_s = df_f.sort_values("date").reset_index(drop=True)
@@ -191,7 +191,7 @@ with tab1:
             xaxis_title="год", yaxis_title="га",
             hovermode="x unified", height=450,
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     if "лето" in season:
         sm_all = pd.read_csv(DATA_DIR / "yearly_summary.csv")
@@ -229,7 +229,7 @@ with tab1:
                     xaxis_title="год", yaxis_title="га",
                     height=400, hovermode="x unified",
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
                 c1, c2, c3 = st.columns(3)
                 c1.write(f"2026: **{pred[0]:.0f} га**")
@@ -267,7 +267,7 @@ with tab1:
                 xaxis_title="год", yaxis_title="z-score",
                 height=380, hovermode="x unified",
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         with c2:
             fig = go.Figure()
@@ -291,7 +291,7 @@ with tab1:
                 xaxis_title="застройка, га", yaxis_title="зелень, га",
                 height=380,
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         if r < 0:
             sign = "отрицательная"
@@ -332,7 +332,7 @@ with tab2:
                 st.caption(thresh + (" + норм" if normalize else ""))
 
         with left:
-            st.image(str(sel_path), use_container_width=True)
+            st.image(str(sel_path), width="stretch")
             st.caption("True Color | NDBI | маска")
 
 
@@ -342,7 +342,7 @@ with tab3:
         df_f[["date","year","month",col_area,"ndbi_mean","ndbi_std"]].rename(
             columns={col_area: "площадь_га"}
         ),
-        use_container_width=True, height=400
+        width="stretch", height=400
     )
     st.download_button(
         "скачать csv",
@@ -352,7 +352,7 @@ with tab3:
     )
 
     st.write("сводка по годам (лето):")
-    st.dataframe(summary, use_container_width=True)
+    st.dataframe(summary, width="stretch")
 
 
 with tab4:
