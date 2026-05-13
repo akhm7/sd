@@ -51,7 +51,7 @@ MNDWI = (B03 - B11) / (B03 + B11)   # вода
 `skimage.match_histograms` к эталонной сцене 2021-07-13 - разброс
 между датами упал с ~30 до ~8 га.
 
-прогноз на 2026-2028 через `statsmodels.ExponentialSmoothing` (Holt).
+прогноз на 2026-2028 через `statsmodels.ExponentialSmoothing`.
 корреляция застройки и зелени через коэф Пирсона + z-нормализация.
 
 ## данные

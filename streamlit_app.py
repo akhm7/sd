@@ -208,7 +208,7 @@ with tab1:
         meds = by_yr_p[col_area].values
 
     if len(yrs) >= 4:
-        st.write("прогноз на 2026-2028 (Holt exponential smoothing):")
+        st.write("прогноз на 2026-2028:")
         try:
             model = ExponentialSmoothing(meds, trend="add", seasonal=None).fit()
             pred = model.forecast(3)
