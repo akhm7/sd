@@ -46,9 +46,9 @@ if normalize:
 else:
     col_area = "area_t0" if is_t0 else "area_t005"
 
-season = st.sidebar.selectbox(
+season = st.sidebar.radio(
     "сезон",
-    ["лето (июнь-август)", "все сезоны", "зима (дек-фев)"]
+    ["лето (июнь-август)", "зима (дек-фев)"]
 )
 
 df = load_results()
@@ -56,10 +56,8 @@ summary = pd.read_csv(DATA_DIR / "yearly_summary.csv")
 
 if "лето" in season:
     df_f = df[df["month"].isin([6,7,8])]
-elif "зима" in season:
-    df_f = df[df["month"].isin([12,1,2])]
 else:
-    df_f = df.copy()
+    df_f = df[df["month"].isin([12,1,2])]
 
 df_f = df_f[df_f[col_area] > 50]
 

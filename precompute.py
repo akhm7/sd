@@ -109,14 +109,23 @@ def main():
         ("t005_norm", 0.05, True),
     ]
 
+    # для каждого года ищем чистый снимок (без облаков) - где area > 50
+    def pick_clean(yd, months):
+        for mo in months:
+            cand = [d for d in yd if d[5:7]==mo]
+            # сортируем чтоб брать середину сначала
+            order = sorted(cand, key=lambda x: abs(cand.index(x) - len(cand)//2))
+            for d in order:
+                try:
+                    a, _, _ = calc_area(d, thresh=0.0)
+                    if a > 50:
+                        return d
+                except: pass
+        return None
+
     for year, yd in sorted(by_year.items()):
-        s, w = None, None
-        for mo in ("07","06","08","05","04","03"):
-            cand = [d for d in yd if d[5:7]==mo]
-            if cand: s = cand[len(cand)//2]; break
-        for mo in ("01","12","02","11","03"):
-            cand = [d for d in yd if d[5:7]==mo]
-            if cand: w = cand[len(cand)//2]; break
+        s = pick_clean(yd, ("07","06","08","05","04","03"))
+        w = pick_clean(yd, ("01","12","02","11","03"))
 
         for d, lbl in [(s, "summer"), (w, "winter")]:
             if not d: continue
