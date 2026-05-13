@@ -191,50 +191,57 @@ with tab1:
         )
         st.plotly_chart(fig, width="stretch")
 
+    # прогноз - доступен и для лета и для зимы
     if "лето" in season:
         sm_all = pd.read_csv(DATA_DIR / "yearly_summary.csv")
-        if len(sm_all) >= 4:
-            st.write("прогноз на 2026-2028 (Holt exponential smoothing):")
+        yrs = sm_all["year"].values
+        meds = sm_all[col_med if col_med in sm_all.columns else "median"].values
+    else:
+        by_yr_p = df_f.groupby("year")[col_area].median().reset_index()
+        yrs = by_yr_p["year"].values
+        meds = by_yr_p[col_area].values
 
-            yrs = sm_all["year"].values
-            meds = sm_all[col_med if col_med in sm_all.columns else "median"].values
+    if len(yrs) >= 4:
+        st.write("прогноз на 2026-2028 (Holt exponential smoothing):")
+        try:
+            model = ExponentialSmoothing(meds, trend="add", seasonal=None).fit()
+            pred = model.forecast(3)
+            future_yrs = np.arange(yrs[-1]+1, yrs[-1]+4)
 
-            try:
-                model = ExponentialSmoothing(meds, trend="add", seasonal=None).fit()
-                pred = model.forecast(3)
-                future_yrs = np.arange(yrs[-1]+1, yrs[-1]+4)
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=yrs, y=meds, mode="lines+markers",
+                name="факт", line=dict(width=2.5, color=color),
+                marker=dict(size=8),
+                hovertemplate="%{x}: %{y:.0f} га<extra></extra>",
+            ))
+            fig.add_trace(go.Scatter(
+                x=[yrs[-1], future_yrs[0]], y=[meds[-1], pred[0]],
+                mode="lines", line=dict(dash="dash", width=1.5, color="#9b59b6"),
+                showlegend=False, hoverinfo="skip",
+            ))
+            fig.add_trace(go.Scatter(
+                x=future_yrs, y=pred, mode="lines+markers",
+                name="прогноз",
+                line=dict(dash="dash", width=2.5, color="#9b59b6"),
+                marker=dict(size=10, symbol="square"),
+                hovertemplate="%{x}: %{y:.0f} га<extra></extra>",
+            ))
+            fig.update_layout(
+                xaxis_title="год", yaxis_title="га",
+                height=400, hovermode="x unified",
+            )
+            st.plotly_chart(fig, width="stretch")
 
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=yrs, y=meds, mode="lines+markers",
-                    name="факт", line=dict(width=2.5, color=color),
-                    marker=dict(size=8),
-                    hovertemplate="%{x}: %{y:.0f} га<extra></extra>",
-                ))
-                fig.add_trace(go.Scatter(
-                    x=[yrs[-1], future_yrs[0]], y=[meds[-1], pred[0]],
-                    mode="lines", line=dict(dash="dash", width=1.5, color="#9b59b6"),
-                    showlegend=False, hoverinfo="skip",
-                ))
-                fig.add_trace(go.Scatter(
-                    x=future_yrs, y=pred, mode="lines+markers",
-                    name="прогноз",
-                    line=dict(dash="dash", width=2.5, color="#9b59b6"),
-                    marker=dict(size=10, symbol="square"),
-                    hovertemplate="%{x}: %{y:.0f} га<extra></extra>",
-                ))
-                fig.update_layout(
-                    xaxis_title="год", yaxis_title="га",
-                    height=400, hovermode="x unified",
-                )
-                st.plotly_chart(fig, width="stretch")
+            c1, c2, c3 = st.columns(3)
+            c1.write(f"2026: **{pred[0]:.0f} га**")
+            c2.write(f"2027: **{pred[1]:.0f} га**")
+            c3.write(f"2028: **{pred[2]:.0f} га**")
+        except Exception as e:
+            st.warning(f"модель не сошлась: {e}")
 
-                c1, c2, c3 = st.columns(3)
-                c1.write(f"2026: **{pred[0]:.0f} га**")
-                c2.write(f"2027: **{pred[1]:.0f} га**")
-                c3.write(f"2028: **{pred[2]:.0f} га**")
-            except Exception as e:
-                st.warning(f"модель не сошлась: {e}")
+    if "зима" in season:
+        st.caption("корреляция с растительностью считается только для лета - зимой деревья без листьев, NDVI < 0.3 редко срабатывает")
 
     if "лето" in season and "median_veg" in summary.columns:
         st.write("корреляция застройка vs зелень (z-нормализация чтоб масштабы совпали):")
