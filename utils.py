@@ -101,6 +101,16 @@ def load_rgb(date, shape=None):
     return np.nan_to_num(rgb, nan=0.0)
 
 
+def load_rgb_norm(date, shape=None):
+    r = load_band_norm(date, BANDS["red"], shape)
+    g = load_band_norm(date, BANDS["green"], shape)
+    b = load_band_norm(date, BANDS["blue"], shape)
+    rgb = np.dstack([r,g,b]).astype(float)
+    p2, p98 = np.nanpercentile(rgb, 2), np.nanpercentile(rgb, 98)
+    rgb = np.clip((rgb-p2)/(p98-p2+1e-10), 0, 1)
+    return np.nan_to_num(rgb, nan=0.0)
+
+
 def show_map(date, thresh=0.0):
     try:
         area, mask, idx = calc_area(date, thresh)

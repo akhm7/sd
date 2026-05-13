@@ -7,7 +7,7 @@ from pathlib import Path
 from collections import defaultdict
 from tqdm import tqdm
 
-from utils import get_dates, calc_area, load_rgb
+from utils import get_dates, calc_area, load_rgb, load_rgb_norm
 
 
 OUT = Path("streamlit_data")
@@ -125,14 +125,26 @@ def main():
                     print(f"карта {year} {lbl} {key}: {d}")
                     area, mask, idx = calc_area(d, thresh=th, normalize=norm)
                     rgb = load_rgb(d, idx["shape"])
-                    fig, ax = plt.subplots(1, 3, figsize=(16, 5))
-                    ax[0].imshow(rgb); ax[0].set_title(f"True Color\n{d}"); ax[0].axis("off")
-                    im = ax[1].imshow(idx["ndbi"], cmap="RdYlGn_r", vmin=-0.5, vmax=0.5)
-                    ax[1].set_title("NDBI"); ax[1].axis("off")
-                    plt.colorbar(im, ax=ax[1], fraction=0.046, pad=0.04)
-                    ov = rgb.copy()
-                    ov[mask,0]=1.0; ov[mask,1]=0.2; ov[mask,2]=0.2
-                    ax[2].imshow(ov); ax[2].set_title(f"маска\n{area:.1f} га"); ax[2].axis("off")
+                    if norm:
+                        rgb_n = load_rgb_norm(d, idx["shape"])
+                        fig, ax = plt.subplots(1, 4, figsize=(20, 5))
+                        ax[0].imshow(rgb); ax[0].set_title(f"True Color\n{d}"); ax[0].axis("off")
+                        ax[1].imshow(rgb_n); ax[1].set_title("True Color (норм.)"); ax[1].axis("off")
+                        im = ax[2].imshow(idx["ndbi"], cmap="RdYlGn_r", vmin=-0.5, vmax=0.5)
+                        ax[2].set_title("NDBI"); ax[2].axis("off")
+                        plt.colorbar(im, ax=ax[2], fraction=0.046, pad=0.04)
+                        ov = rgb.copy()
+                        ov[mask,0]=1.0; ov[mask,1]=0.2; ov[mask,2]=0.2
+                        ax[3].imshow(ov); ax[3].set_title(f"маска\n{area:.1f} га"); ax[3].axis("off")
+                    else:
+                        fig, ax = plt.subplots(1, 3, figsize=(16, 5))
+                        ax[0].imshow(rgb); ax[0].set_title(f"True Color\n{d}"); ax[0].axis("off")
+                        im = ax[1].imshow(idx["ndbi"], cmap="RdYlGn_r", vmin=-0.5, vmax=0.5)
+                        ax[1].set_title("NDBI"); ax[1].axis("off")
+                        plt.colorbar(im, ax=ax[1], fraction=0.046, pad=0.04)
+                        ov = rgb.copy()
+                        ov[mask,0]=1.0; ov[mask,1]=0.2; ov[mask,2]=0.2
+                        ax[2].imshow(ov); ax[2].set_title(f"маска\n{area:.1f} га"); ax[2].axis("off")
                     suf = "норм." if norm else ""
                     plt.suptitle(f"Ташкент {d} | порог {th} {suf}", fontsize=13, fontweight="bold")
                     plt.tight_layout()
