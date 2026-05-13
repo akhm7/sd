@@ -136,8 +136,8 @@ def fetch_cog_window(url, roi_geojson, out_path):
 
 def main():
     print("=" * 55)
-    print("  Sentinel-2 → NDBI + RGB  |  Ташкент  (COG-режим)")
-    print(f"  {DATE_START} → {DATE_END}")
+    print("  Sentinel-2 -> NDBI + RGB  |  Ташкент  (COG-режим)")
+    print(f"  {DATE_START} - {DATE_END}")
     print(f"  Облачность < {MAX_CLOUD}%")
     print(f"  Каналы: {', '.join(BANDS.keys())}  ({len(BANDS)} шт.)")
     print(f"  Выход: {OUTPUT_DIR.resolve()}")
@@ -155,7 +155,7 @@ def main():
     saved = skipped = errors = 0
 
     for i, (d_from, d_to) in enumerate(chunks, 1):
-        print(f"[{i}/{len(chunks)}]  {d_from} → {d_to}")
+        print(f"[{i}/{len(chunks)}]  {d_from} - {d_to}")
 
         try:
             search = catalog.search(
