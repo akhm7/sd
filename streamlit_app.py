@@ -130,6 +130,12 @@ with tab1:
     else:
         by_yr = df_f.groupby("year")[col_area].agg(["median","min","max"]).reset_index()
         if len(by_yr) >= 2:
+            first = by_yr.iloc[0]["median"]
+            last = by_yr.iloc[-1]["median"]
+            st.write(f"рост {by_yr.iloc[0]['year']}-{by_yr.iloc[-1]['year']}: "
+                     f"**{first:.0f} - {last:.0f} га** ({(last-first):+.0f} га, "
+                     f"{(last-first)/first*100:+.1f}%)")
+
             fig = go.Figure()
             fig.add_trace(go.Bar(
                 x=by_yr["year"], y=by_yr["median"],
@@ -240,63 +246,68 @@ with tab1:
         except Exception as e:
             st.warning(f"модель не сошлась: {e}")
 
-    if "зима" in season:
-        st.caption("корреляция с растительностью считается только для лета - зимой деревья без листьев, NDVI < 0.3 редко срабатывает")
+    # корреляция застройка vs зелень - для обоих сезонов
+    if "area_veg" in df_f.columns:
+        by_corr = df_f.groupby("year").agg(
+            bld=(col_area, "median"),
+            veg=("area_veg", "median"),
+        ).reset_index()
 
-    if "лето" in season and "median_veg" in summary.columns:
-        st.write("корреляция застройка vs зелень (z-нормализация чтоб масштабы совпали):")
+        if len(by_corr) >= 3:
+            st.write("корреляция застройка vs зелень (z-нормализация чтоб масштабы совпали):")
+            if "зима" in season:
+                st.caption("зимой зелени мало (деревья без листьев), связь обычно слабее")
 
-        sm_corr = summary.copy()
-        bld = sm_corr[col_med].values
-        veg = sm_corr["median_veg"].values
+            bld = by_corr["bld"].values
+            veg = by_corr["veg"].values
 
-        bz = (bld - bld.mean()) / bld.std()
-        vz = (veg - veg.mean()) / veg.std()
+            bz = (bld - bld.mean()) / bld.std() if bld.std() > 0 else bld * 0
+            vz = (veg - veg.mean()) / veg.std() if veg.std() > 0 else veg * 0
 
-        r = float(np.corrcoef(bld, veg)[0,1])
+            r = float(np.corrcoef(bld, veg)[0,1])
 
-        c1, c2 = st.columns(2)
-        with c1:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=sm_corr["year"], y=bz, mode="lines+markers",
-                name="застройка (z)", line=dict(width=2, color="#e74c3c"),
-            ))
-            fig.add_trace(go.Scatter(
-                x=sm_corr["year"], y=vz, mode="lines+markers",
-                name="зелень (z)", line=dict(width=2, color="#27ae60"),
-            ))
-            fig.add_hline(y=0, line=dict(color="gray", width=1))
-            fig.update_layout(
-                title="z-нормализованные ряды",
-                xaxis_title="год", yaxis_title="z-score",
-                height=380, hovermode="x unified",
-            )
-            st.plotly_chart(fig, width="stretch")
+            c1, c2 = st.columns(2)
+            with c1:
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=by_corr["year"], y=bz, mode="lines+markers",
+                    name="застройка (z)", line=dict(width=2, color="#e74c3c"),
+                ))
+                fig.add_trace(go.Scatter(
+                    x=by_corr["year"], y=vz, mode="lines+markers",
+                    name="зелень (z)", line=dict(width=2, color="#27ae60"),
+                ))
+                fig.add_hline(y=0, line=dict(color="gray", width=1))
+                fig.update_layout(
+                    title="z-нормализованные ряды",
+                    xaxis_title="год", yaxis_title="z-score",
+                    height=380, hovermode="x unified",
+                )
+                st.plotly_chart(fig, width="stretch")
 
-        with c2:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=bld, y=veg, mode="markers+text",
-                text=sm_corr["year"], textposition="top center",
-                marker=dict(size=12, color="#3498db",
-                           line=dict(width=1, color="black")),
-                showlegend=False,
-                hovertemplate="%{text}<br>застр: %{x:.0f}<br>зел: %{y:.0f}<extra></extra>",
-            ))
-            z = np.polyfit(bld, veg, 1)
-            xs = np.linspace(bld.min(), bld.max(), 50)
-            fig.add_trace(go.Scatter(
-                x=xs, y=np.poly1d(z)(xs),
-                mode="lines", line=dict(dash="dash", color="red"),
-                name=f"r = {r:.2f}",
-            ))
-            fig.update_layout(
-                title=f"scatter (Пирсон r = {r:.2f})",
-                xaxis_title="застройка, га", yaxis_title="зелень, га",
-                height=380,
-            )
-            st.plotly_chart(fig, width="stretch")
+            with c2:
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=bld, y=veg, mode="markers+text",
+                    text=by_corr["year"], textposition="top center",
+                    marker=dict(size=12, color="#3498db",
+                               line=dict(width=1, color="black")),
+                    showlegend=False,
+                    hovertemplate="%{text}<br>застр: %{x:.0f}<br>зел: %{y:.0f}<extra></extra>",
+                ))
+                z = np.polyfit(bld, veg, 1)
+                xs = np.linspace(bld.min(), bld.max(), 50)
+                fig.add_trace(go.Scatter(
+                    x=xs, y=np.poly1d(z)(xs),
+                    mode="lines", line=dict(dash="dash", color="red"),
+                    name=f"r = {r:.2f}",
+                ))
+                fig.update_layout(
+                    title=f"scatter (Пирсон r = {r:.2f})",
+                    xaxis_title="застройка, га", yaxis_title="зелень, га",
+                    height=380,
+                )
+                st.plotly_chart(fig, width="stretch")
 
         if r < 0:
             sign = "отрицательная"
@@ -338,7 +349,6 @@ with tab2:
 
         with left:
             st.image(str(sel_path), width="stretch")
-            st.caption("True Color | NDBI | маска")
 
 
 with tab3:
